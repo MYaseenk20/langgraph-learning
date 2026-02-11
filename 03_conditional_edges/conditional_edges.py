@@ -1,15 +1,21 @@
 from IPython.display import Image, display
 import operator
 from typing import Annotated, List, Literal, TypedDict
+
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
+
+
+memory = InMemorySaver()
+config = {"configurable":{"thread_id":"1"}}
 
 class State(TypedDict):
     nlist : Annotated[list[str], operator.add]
 
 
 def node_a(state: State) -> Command[Literal["b", "c", END]]:
-    select = state["nlist"][-1]
+    select = state["nlist"][-1]  # take last state
     if select == "b":
         next_node = "b"
     elif select == "c":
@@ -37,7 +43,7 @@ def node_c(state: State) -> State:
 
 
 def conditional_edge(state: State) -> Literal["b", "c", END]:
-    select = state["nlist"][-1]
+    select = state["nlist"][-1] # take last state
     if select == "b":
         return "b"
     elif select == "c":
@@ -60,16 +66,16 @@ if __name__ == "__main__":
     builder.add_edge(START, "a")
     builder.add_edge("b", END)
     builder.add_edge("c", END)
-    # builder.add_conditional_edges("a", conditional_edge)
+    # builder.add_conditional_edges("a", conditional_edge)d
 
     # Compile and display
-    graph = builder.compile()
+    graph = builder.compile(checkpointer=memory)
     # display(Image(graph.get_graph().draw_mermaid_png()))
     while True:
         user = input('b, c, or q to quit: ')
         print(user)
         input_state = State(nlist=[user])
-        result = graph.invoke(input_state)
+        result = graph.invoke(input_state,config)
         print(result)
         if result['nlist'][-1] == "q":
             print("quit")
