@@ -15,6 +15,7 @@ class State(TypedDict):
 
 
 def node_a(state: State) -> Command[Literal["b", "c", END]]:
+    print("Entered 'a' node")
     select = state["nlist"][-1]  # take last state
     if select == "b":
         next_node = "b"
@@ -23,7 +24,15 @@ def node_a(state: State) -> Command[Literal["b", "c", END]]:
     elif select == "q":
         next_node = END
     else:
-        next_node = END
+        admin = interrupt(f"Unexpected input ${select}")
+        print(admin)
+        if admin == 'continue':
+            next_node = "b"
+            # select = "b"
+        else:
+            next_node = END
+            select = "q"
+        # next_node = END
 
     return Command(
         update=State(nlist=[select]),
@@ -75,7 +84,19 @@ if __name__ == "__main__":
         user = input('b, c, or q to quit: ')
         print(user)
         input_state = State(nlist=[user])
-        result = graph.invoke(input_state,config)
+        result = graph.invoke(input_state, config)
+
+        if '__interrupt__' in result:
+            print(f"Interrupt detected: {result}")
+            msg = result['__interrupt__'][-1].value
+            print(msg)
+            human = input(f"\n{msg}: ")
+
+            human_response = Command(
+                resume=human
+            )
+            result = graph.invoke(human_response, config)
+
         print(result)
         if result['nlist'][-1] == "q":
             print("quit")
